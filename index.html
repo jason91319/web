@@ -1,0 +1,598 @@
+﻿<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>文件名查询清单</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f5f6f8;
+      --panel: #ffffff;
+      --text: #171a1f;
+      --muted: #68707a;
+      --line: #d9dee5;
+      --accent: #1768ac;
+      --accent-soft: #eaf4fb;
+      --good: #126b43;
+      --good-soft: #e8f6ef;
+      --bad: #a13f2b;
+      --bad-soft: #fff0ec;
+      --miss: #765500;
+      --miss-soft: #fff6d7;
+      --hit: #fff1a6;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 15px/1.5 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+    }
+
+    header {
+      background: var(--panel);
+      border-bottom: 1px solid var(--line);
+      padding: 24px clamp(16px, 4vw, 48px);
+    }
+
+    main {
+      max-width: 1160px;
+      margin: 0 auto;
+      padding: 24px clamp(16px, 4vw, 32px) 48px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(26px, 4vw, 38px);
+      line-height: 1.1;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      margin: 0 0 14px;
+      font-size: 18px;
+      letter-spacing: 0;
+    }
+
+    h3 {
+      margin: 0;
+      font-size: 15px;
+      letter-spacing: 0;
+    }
+
+    p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .stats,
+    .toolbar,
+    .actions,
+    .list-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .stats {
+      margin-top: 16px;
+    }
+
+    .stat {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px 12px;
+      background: #fbfcfd;
+      color: var(--muted);
+    }
+
+    .stat strong {
+      color: var(--text);
+      margin-right: 4px;
+    }
+
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px;
+      margin-bottom: 18px;
+    }
+
+    .search {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    input {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--text);
+      font: inherit;
+      background: var(--panel);
+    }
+
+    input {
+      min-height: 44px;
+      padding: 0 12px;
+    }
+
+    button {
+      min-height: 36px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 0 12px;
+      background: var(--panel);
+      color: var(--text);
+      font: inherit;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    button:hover,
+    button:focus-visible,
+    input:focus {
+      border-color: var(--accent);
+      outline: none;
+    }
+
+    .result-summary {
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    .result-list,
+    .saved-list {
+      display: grid;
+      gap: 8px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .result,
+    .saved-item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      overflow-wrap: anywhere;
+    }
+
+    .result {
+      background: var(--panel);
+    }
+
+    .name {
+      font-weight: 650;
+    }
+
+    .path,
+    .hint,
+    .count {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .path {
+      margin-top: 2px;
+    }
+
+    .review-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 14px;
+    }
+
+    .review-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      min-width: 0;
+    }
+
+    .review-card.wanted {
+      background: var(--good-soft);
+      border-color: #c7e7d5;
+    }
+
+    .review-card.unwanted {
+      background: var(--bad-soft);
+      border-color: #f0c0b5;
+    }
+
+    .review-card.missing {
+      background: var(--miss-soft);
+      border-color: #ead588;
+    }
+
+    .list-head {
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .saved-item {
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .tree,
+    .tree ul {
+      list-style: none;
+      margin: 0;
+      padding-left: 18px;
+    }
+
+    .tree {
+      padding-left: 0;
+    }
+
+    details {
+      margin: 2px 0;
+    }
+
+    summary {
+      cursor: pointer;
+      min-height: 28px;
+      overflow-wrap: anywhere;
+    }
+
+    .file {
+      min-height: 28px;
+      display: flex;
+      align-items: center;
+      overflow-wrap: anywhere;
+    }
+
+    .icon {
+      display: inline-block;
+      width: 1.45em;
+      color: var(--muted);
+    }
+
+    mark {
+      background: var(--hit);
+      color: inherit;
+      padding: 0 1px;
+      border-radius: 2px;
+    }
+
+    .empty {
+      color: var(--muted);
+      padding: 8px 0 0;
+    }
+
+    @media (max-width: 860px) {
+      .review-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .search,
+      .result {
+        grid-template-columns: 1fr;
+      }
+
+      button,
+      .actions {
+        width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>文件名查询清单</h1>
+    <p>这个页面只包含文件夹名和文件名，不包含文件内容。</p>
+    <div class="stats" aria-label="清单统计">
+      <span class="stat"><strong id="fileCount">0</strong> 个文件</span>
+      <span class="stat"><strong id="folderCount">0</strong> 个文件夹</span>
+      <span class="stat">生成时间（北京时间） <strong id="generatedAt"></strong></span>
+    </div>
+  </header>
+
+  <main>
+    <section class="section" aria-labelledby="searchTitle">
+      <h2 id="searchTitle">搜索文件名</h2>
+      <div class="search">
+        <input id="query" type="search" autocomplete="off" placeholder="输入文件名的一部分或完整文件名">
+        <button id="clear" type="button">清空</button>
+      </div>
+      <div id="summary" class="result-summary">输入关键词后开始搜索。</div>
+      <ul id="results" class="result-list"></ul>
+    </section>
+
+    <section class="section" aria-labelledby="reviewTitle">
+      <div class="toolbar">
+        <h2 id="reviewTitle">整理清单</h2>
+      </div>
+      <p class="hint">以下内容来自后台文本文件，只用于展示。</p>
+
+      <div class="review-grid">
+        <div class="review-card wanted">
+          <div class="list-head">
+            <h3>想要</h3>
+            <span id="wantedCount" class="count">0 项</span>
+          </div>
+          <ul id="wantedList" class="saved-list"></ul>
+        </div>
+
+        <div class="review-card unwanted">
+          <div class="list-head">
+            <h3>不想要</h3>
+            <span id="unwantedCount" class="count">0 项</span>
+          </div>
+          <ul id="unwantedList" class="saved-list"></ul>
+        </div>
+
+        <div class="review-card missing">
+          <div class="list-head">
+            <h3>缺少</h3>
+            <span id="missingCount" class="count">0 项</span>
+          </div>
+          <ul id="missingList" class="saved-list"></ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" aria-labelledby="treeTitle">
+      <h2 id="treeTitle">文件树</h2>
+      <div id="tree" class="tree"></div>
+    </section>
+  </main>
+
+  <script>
+    const INDEX_DATA = {"sourceName":"collection","generatedAt":"2026-06-07 13:38:16","files":820,"folders":29,"tree":{"name":"collection","type":"folder","children":[{"name":"一只喀秋鲨","type":"folder","children":[{"name":"C1圣女魔女mp3.mp3","type":"file"},{"name":"C2母系mp3（无伴奏）.mp3","type":"file"},{"name":"C2母系mp3（有伴奏）.mp3","type":"file"},{"name":"C3拷问mp3（无脑波） .mp3","type":"file"},{"name":"C3拷问mp3-b站一只喀秋鲨.mp3","type":"file"}]},{"name":"三点水","type":"folder","children":[{"name":"B01【三点水社】.wav","type":"file"},{"name":"G01.mp3","type":"file"},{"name":"M01 触手洗脑女战斗员 1 本篇.mp3","type":"file"},{"name":"M01 触手洗脑女战斗员 1 番外.MP3","type":"file"},{"name":"M02 触手洗脑女战斗员化①.mp3","type":"file"},{"name":"M02-后日谈のKiss课程.MP3","type":"file"},{"name":"M03 女战斗员洗脑陷阱②.wav","type":"file"},{"name":"M04-总集篇.mp3","type":"file"},{"name":"M05【三点水社】.mp3","type":"file"},{"name":"M06 女战斗员洗脑陷阱 5.mp3","type":"file"},{"name":"M06 女战斗员洗脑陷阱 5.wav","type":"file"},{"name":"M06-ASMR纯享版.wav","type":"file"}]},{"name":"三酒","type":"folder","children":[{"name":"S","type":"folder","children":[{"name":"S02 定制妖女玉娇.mp3","type":"file"},{"name":"S03 魅魔主播的扑克牌游戏1-首次开始.mp3","type":"file"},{"name":"S03 魅魔主播的扑克牌游戏2-游戏环节.mp3","type":"file"},{"name":"S03 魅魔主播的扑克牌游戏3-胜利分支.mp3","type":"file"},{"name":"S03 魅魔主播的扑克牌游戏4-失败分支.mp3","type":"file"},{"name":"S03 魅魔主播的扑克牌游戏5-二次播放.mp3","type":"file"},{"name":"S04 定制-异域舞娘勾魂之夜.mp3","type":"file"},{"name":"S05蜘蛛姐姐的餐前引导.mp3","type":"file"},{"name":"S06 定制骑控蛛妖mp3.mp3","type":"file"},{"name":"S07 你正在成为我的魔术-定制TK.mp3","type":"file"},{"name":"S08女干部的波点裤袜催眠 裤袜、败北、洗脑.mp3","type":"file"},{"name":"S10 女干部的天鹅绒裤袜洗脑.mp3","type":"file"}]},{"name":"【三酒】 C26误入逍遥（三支线）.zip","type":"file"},{"name":"【三酒】魅魔主播的扑克牌游戏.zip","type":"file"},{"name":"【催眠红茶】催眠幻梦蛇仙-三酒.mp3","type":"file"},{"name":"【催眠红茶】催眠无法思考的雕像-三酒.mp3","type":"file"},{"name":"15.催眠 乖乖做我的人偶吧 正篇 -三酒.mp3","type":"file"},{"name":"16.恶女干部与勇者的催眠故事-三酒.mp3","type":"file"},{"name":"17.天坛妖女的迷心术-三酒.mp3","type":"file"},{"name":"20.女狐狸化身学姐的诡计-三酒.mp3","type":"file"},{"name":"22.被妖精洗脑催钱 -三酒.mp3","type":"file"},{"name":"27.【彩蛋】阿卡迪亚的催眠侵略-三酒.mp3","type":"file"},{"name":"27.催眠阿卡迪亚的侵略2-三酒.mp3","type":"file"},{"name":"28.心理疗愈师的催眠训诫-三酒.mp3","type":"file"},{"name":"38.编织梦境_催眠控制_倒计时_遗忘_.mp3","type":"file"},{"name":"5_6134063603428367864.mp3","type":"file"},{"name":"9.催眠 恶作剧长篇 -三酒.mp3","type":"file"},{"name":"A_0起点_L_0无良医师治疗日志_亲爱的房东先生_您确定要用这种方式抵消租金吗？30_心理疗愈租客的催眠训诫.mp3","type":"file"},{"name":"A_1_5_番外_无良医师治疗日志_本篇为心理疗愈师的训诫（日志A_1）的番外篇，但作为接受过数次“催眠治疗”的客人，短暂的番.mp3","type":"file"},{"name":"A_1_无良医师治疗日志_想要修正成符合我想发的样子_也不是一瞬间的事情呢_如果您有这方面的需求野完全可以（28_心理疗愈师的催眠训诫）.mp3","type":"file"},{"name":"A_2_无良医师治疗日志_亲爱的客人，这次来找我是什么要求呢？只是失眠么？有点大材小用（绿色健康）了呢～但既然是你的要求…….mp3","type":"file"},{"name":"A_3_无良医师治疗日志记忆替换今天的主题呢？是记忆～这可是非常高难度又危险的课题，涉及到关于“常识”和“替换”之类的麻烦事。_.mp3","type":"file"},{"name":"A-03.mp3","type":"file"},{"name":"C01 无良医师治疗日志 a-2.mp3","type":"file"},{"name":"C02 无良医师治疗日志 a-1.5.mp3","type":"file"},{"name":"C03玩具_完整.mp3","type":"file"},{"name":"C04AI诊疗室_三酉酒_（只要听到我的声音，身体里的力气就会被慢慢的抽走，思考停滞，变成任我摆布的傀儡这不是“你”给“我”的设定么）.mp3","type":"file"},{"name":"C05琵琶妖女_.mp3","type":"file"},{"name":"C07想要我说遗忘吗（无贡系版）.mp3","type":"file"},{"name":"C07榨金主播_想要我说遗忘吗_（今天的身份是主播_主人、催眠、贡系、微存止、倒数）.mp3","type":"file"},{"name":"C08催眠雕塑女友.mp3","type":"file"},{"name":"C09舞台僵直催眠为洗脑人偶.mp3","type":"file"},{"name":"C10咨询师的私下指导.mp3","type":"file"},{"name":"C11 催眠 蜘蛛女皇的垂爱 -三酒.mp3","type":"file"},{"name":"C12 催眠【双子】魔法少女的恶堕 -三酒.mp3","type":"file"},{"name":"C12【双子】魔法少女的恶堕.mp3","type":"file"},{"name":"C13 催眠奴隶的败北 -三酒.mp3","type":"file"},{"name":"C14 催眠 审讯室内的回响 20分钟版 -三酒.mp3","type":"file"},{"name":"C14 催眠 审讯室内的回响 23分钟版 -三酒.mp3","type":"file"},{"name":"C15 催眠 假装在拷问的音声 -三酒.mp3","type":"file"},{"name":"C16音声 被催眠的女仆对你强制爱（催眠OR被催眠_反转_足控）CV三酒.mp3","type":"file"},{"name":"C17 冷落粘人女朋友的下场.mp3","type":"file"},{"name":"C18高跟鞋1序幕_B站三酉酒啊.mp3","type":"file"},{"name":"C18高跟鞋2回溯_B站三酉酒啊.mp3","type":"file"},{"name":"C18高跟鞋3间章_B站三酉酒啊.mp3","type":"file"},{"name":"C18高跟鞋4螺旋_B站三酉酒啊.mp3","type":"file"},{"name":"C18高跟鞋5终曲_B站三酉酒啊.mp3","type":"file"},{"name":"C19 催眠 狐妖的再续前缘 -三酒.mp3","type":"file"},{"name":"C20 催眠 无良医师治疗日志—A4 -三酒.mp3","type":"file"},{"name":"C21没有陷阱的解除_b站三酉酒啊.mp3","type":"file"},{"name":"C22走向崩坏的催眠放松体验_b站三酉酒啊.mp3","type":"file"},{"name":"C23幽眠亭之安眠_b站三酉酒啊.mp3","type":"file"},{"name":"C24雨夜的温柔陷阱.mp3","type":"file"},{"name":"C25还要，再“确认”一下吗_b站三酉酒啊.mp3","type":"file"},{"name":"C27 师姐的“特训”.mp3","type":"file"},{"name":"C28 环-圣女_b站三酉酒啊.mp3","type":"file"},{"name":"C29 占卜师姐姐的恶作剧.mp3","type":"file"},{"name":"C30想要，变得“输“服吗_b站三酉酒啊.mp3","type":"file"},{"name":"C31 b站三酉酒啊_幽眠亭 丝袜 1 序章.mp3","type":"file"},{"name":"C31 b站三酉酒啊_幽眠亭 丝袜 2 沦陷.mp3","type":"file"},{"name":"C31 b站三酉酒啊_幽眠亭 丝袜 3 解除.mp3","type":"file"},{"name":"C31 b站三酉酒啊_幽眠亭 丝袜 EXTRA 败北游戏.mp3","type":"file"},{"name":"C32 魔族体验图鉴︱花妖篇.mp3","type":"file"},{"name":"C33定制_妈咪对你们的洗礼_b站三酉酒啊(1).mp3","type":"file"},{"name":"C34 催眠 腹黑女友的奴系驯化 -三酒.mp3","type":"file"},{"name":"C35 ASMR 体感增强羞耻催眠.mp3","type":"file"},{"name":"C35 ASMR增强羞耻催眠 -三酒.mp3","type":"file"},{"name":"C36 蛛网易陷，情丝难解 -三酒.mp3","type":"file"},{"name":"C37 青梅竹马的升温游戏 -三酒.mp3","type":"file"},{"name":"C38.mp3","type":"file"},{"name":"C38app.apk","type":"file"},{"name":"C39 爱美之心.mp3","type":"file"},{"name":"C40 虚弱的魅魔妈妈想要你.mp3","type":"file"},{"name":"C41音声 她编织的夜晚和被编织的你.mp3","type":"file"},{"name":"C42潜心教主的洗礼_b站三酉酒啊.mp3","type":"file"},{"name":"C43三级居家汗蒸挑战_b站三酉酒啊.mp3","type":"file"},{"name":"C44 三酒女神神教教主的逆拷问.mp3","type":"file"},{"name":"C45 酩酊之歌.mp3","type":"file"},{"name":"C46在学姐家里舒服的过载掉吧 A.mp3","type":"file"},{"name":"C46在学姐家里舒服的过载掉吧 B（全音效）.mp3","type":"file"},{"name":"C47销魂鞋店_B站三酉酒啊.mp3","type":"file"},{"name":"C48双子怪人的洗脑_b站三酉酒啊A版.mp3","type":"file"},{"name":"C48双子怪人的洗脑_b站三酉酒啊B版.mp3","type":"file"},{"name":"C49幽眠亭5眼罩_1序_b站三酉酒啊.mp3","type":"file"},{"name":"C49幽眠亭5眼罩_2引导_B站三酉酒啊.mp3","type":"file"},{"name":"C49幽眠亭5眼罩_3诅咒_b站三酉酒啊.mp3","type":"file"},{"name":"C49幽眠亭5眼罩_4解除？_b站三酉酒啊.mp3","type":"file"},{"name":"C50妈妈的乖孩子_b站三酉酒啊.mp3","type":"file"},{"name":"C50妈妈的乖孩子_白噪音_b站三酉酒啊.mp3","type":"file"},{"name":"C51三酒女神教的脱敏治疗.mp3","type":"file"},{"name":"C52人偶收藏家的心智崩坏_B站三酉酒啊.mp3","type":"file"},{"name":"C53想要，变得“输”服2_B站三酉酒啊.mp3","type":"file"},{"name":"C53想要，变得“输”服2_B站三酉酒啊.wav","type":"file"},{"name":"C54 魔物体验图鉴之宝箱怪.mp3","type":"file"},{"name":"C54 魔物体验图鉴之宝箱怪.wav","type":"file"},{"name":"S08女干部的波点裤袜催眠_b站三酉酒啊 (1).mp3","type":"file"},{"name":"三酒-催眠你只是想被我催眠而已~.mp3","type":"file"},{"name":"三酒-催眠准备好了吗？催眠开始咯~.mp3","type":"file"},{"name":"三酒-催眠学妹的坏心思~.mp3","type":"file"},{"name":"三酒-催眠师女友的枕边安慰~.mp3","type":"file"},{"name":"三酒-催眠森林女巫的催眠你不想试试吗.mp3","type":"file"},{"name":"三酒-催眠欢迎体验螺旋催眠实验.mp3","type":"file"},{"name":"三酒-催眠这样的催眠拷问你能守住秘密吗.mp3","type":"file"},{"name":"三酒-催眠遇到魔女的催眠你喜欢吗.mp3","type":"file"},{"name":"三酒-催眠邪恶女巫的水晶球催眠.mp3","type":"file"},{"name":"三酒-催眠魔物体验图鉴——梦魔篇2.mp3","type":"file"},{"name":"三酒夭夭-催眠女仆~要好好听从主人的命令哦.mp3","type":"file"},{"name":"三酒-当蜈蚣娘~被送到家中.mp3","type":"file"},{"name":"三酒-洞房之夜~在茧里舒服吗.mp3","type":"file"},{"name":"三酒-醉酒女友向你撒娇~说~啊~为什么冷落她.mp3","type":"file"}]},{"name":"不感兴趣","type":"folder","children":[{"name":"卡卡酱","type":"folder","children":[{"name":"姐妹的私密礼物","type":"folder","children":[{"name":"正片1-糟了！在更衣室里被缩小了.mp3","type":"file"},{"name":"正片2-学姐学妹的私人玩具.mp3","type":"file"},{"name":"结局1 来成为美少女的一部分吧.mp3","type":"file"},{"name":"结局2 姐妹二人的“体内交往”.mp3","type":"file"}]},{"name":"侦探已死.mp3","type":"file"},{"name":"变态先生.mp3","type":"file"},{"name":"后会有期 -完整版.mp3","type":"file"},{"name":"后会有期 -纯享版.mp3","type":"file"},{"name":"吸血鬼女王的新娘.mp3","type":"file"},{"name":"夜梦 -纯享版.mp3","type":"file"},{"name":"夜梦.mp3","type":"file"},{"name":"女保镖完整版剧情.mp3","type":"file"},{"name":"女保镖开冲纯享版.mp3","type":"file"},{"name":"女巫傀儡--暗黑背景音乐版.mp3","type":"file"},{"name":"女巫傀儡--脑波背景音乐版 .mp3","type":"file"},{"name":"女巫傀儡--脑波背景音乐版.mp3","type":"file"},{"name":"微醺陷阱.mp3","type":"file"},{"name":"时间游戏（ntr警告）.wav","type":"file"},{"name":"潮涌之海.mp3","type":"file"},{"name":"甜蜜拷问-赏金猎人.mp3","type":"file"},{"name":"蛇妖姐姐投降结局.mp3","type":"file"},{"name":"蛇妖姐姐的温柔乡.mp3","type":"file"},{"name":"蛇妖姐姐结局二.mp3","type":"file"},{"name":"蛇妖姐姐结局二副本.mp3","type":"file"},{"name":"超能力少女续-正片.mp3","type":"file"},{"name":"超能力少女续-番外.mp3","type":"file"},{"name":"魔女御姐.mp3","type":"file"},{"name":"魔女御姐涩涩纯享版.mp3","type":"file"}]},{"name":"织梦","type":"folder","children":[{"name":"【双女主】织梦会所-双凤翊龙.mp3","type":"file"},{"name":"【温柔囚禁 双女主】沦为妩媚小妈和继姐的小俘虏.mp3","type":"file"},{"name":"【私享R16埃及艳后】沙漠之花的禁忌服侍.mp3","type":"file"},{"name":"【私享-胭脂冢】堕入双女的极乐子宫.mp3","type":"file"},{"name":"【织梦会所-私享】秦淮画舫上的柔情一夜.mp3","type":"file"},{"name":"团购居然团到了会所头牌？！.mp3","type":"file"}]},{"name":"魔音","type":"folder","children":[{"name":"Luna贡奴的寸止游戏.mp3","type":"file"},{"name":"催眠奴化 -惟sama.mp3","type":"file"},{"name":"凡心魅劫 -luna.mp3","type":"file"},{"name":"凡心魅劫2正式版.mp3","type":"file"},{"name":"地铁 -Luna.mp3","type":"file"},{"name":"奇幻古董店2 恋足版.mp3","type":"file"},{"name":"奇幻古董店2 献祭版.mp3","type":"file"},{"name":"奇幻古董店之画中仙.mp3","type":"file"},{"name":"女尊教 -luna.mp3","type":"file"},{"name":"她快乐鞋店 -卡琳.mp3","type":"file"},{"name":"巨大魅魔驾校.mp3","type":"file"},{"name":"幻丝空间.mp3","type":"file"},{"name":"幻境摩天轮 -Yoyo Luna.mp3","type":"file"},{"name":"心魔NTR -诱s.mp3","type":"file"},{"name":"恋爱寸止挑战.mp3","type":"file"},{"name":"手控.mp3","type":"file"},{"name":"榨金教室1.mp3","type":"file"},{"name":"榨金教室2.mp3","type":"file"},{"name":"榨金教室3.mp3","type":"file"},{"name":"榨金教室4.mp3","type":"file"},{"name":"欲望塔罗屋 -卡琳.mp3","type":"file"},{"name":"残忍女S的毁灭式调教.mp3","type":"file"},{"name":"毁灭高潮 -luna.mp3","type":"file"},{"name":"洗脑办公室1 -Okita.mp3","type":"file"},{"name":"洗脑办公室2.5  -Okita.mp3","type":"file"},{"name":"洗脑办公室3最终成品.mp3","type":"file"},{"name":"游戏测试员2 -月一姐姐.mp3","type":"file"},{"name":"玉足神偷 asmr版 -卡琳.mp3","type":"file"},{"name":"玉足神偷 -卡琳.mp3","type":"file"},{"name":"玉足神偷2完美版.mp3","type":"file"},{"name":"盘丝洞之天命人的结局 -Luna yoyo 喵宝.mp3","type":"file"},{"name":"美女校医の寸止调教 -千媚.mp3","type":"file"},{"name":"美臀陷阱 -Okita.mp3","type":"file"},{"name":"脑机雌化实验 -露易丝 夭夭.mp3","type":"file"},{"name":"虚拟现实治疗 -Okita.mp3","type":"file"},{"name":"贡瘾治疗1.mp3","type":"file"},{"name":"贡瘾治疗2.mp3","type":"file"},{"name":"贡瘾治疗3.mp3","type":"file"},{"name":"跪下服从.mp3","type":"file"},{"name":"跪下服从重置版 -卡琳.mp3","type":"file"},{"name":"雌堕狂想 漏尿+四爱版 -Yoyo Luna Okita.mp3","type":"file"},{"name":"雌堕狂想 漏尿版.mp3","type":"file"},{"name":"青春绿草地 -卡琳.mp3","type":"file"},{"name":"青春绿草地2\u0026美臀2.mp3","type":"file"},{"name":"高跟靴玩具2 羞辱派对 -靴嘉倪 Queeny 卡琳.mp3","type":"file"},{"name":"高跟鞋下的玩具 -卡琳.mp3","type":"file"},{"name":"魅堕之奴.mp3","type":"file"},{"name":"魔物风俗店 -狐咖.mp3","type":"file"}]},{"name":"鲨鲨才不困","type":"folder","children":[{"name":"sasa莴苣无真相版.MP3","type":"file"},{"name":"sasa莴苣黑童话版.MP3","type":"file"},{"name":"助眠电波里的催眠陷阱-1催眠采耳篇.mp3","type":"file"},{"name":"助眠电波里的催眠陷阱-1催眠采耳篇-无音乐.mp3","type":"file"},{"name":"助眠电波里的催眠陷阱-2深化催眠篇.mp3","type":"file"},{"name":"助眠电波里的催眠陷阱-3特别惊喜篇.mp3","type":"file"},{"name":"巫女的实验.MP3","type":"file"},{"name":"心理疏导室的神秘姐姐.mp3","type":"file"},{"name":"星空魅影.mp3","type":"file"},{"name":"病娇女仆的强制占有.MP3","type":"file"},{"name":"病娇女仆的强制占有-非D结尾.MP3","type":"file"},{"name":"病娇学妹p1.mp3","type":"file"},{"name":"病娇学妹p1无音乐.mp3","type":"file"},{"name":"病娇学妹p2.mp3","type":"file"},{"name":"章鱼娘p1.MP3","type":"file"},{"name":"章鱼娘p2.MP3","type":"file"},{"name":"糟糕，要被妆娘姐姐吃干抹净了.mp3","type":"file"},{"name":"蛇蝎1.MP3","type":"file"},{"name":"蛇蝎2.MP3","type":"file"}]},{"name":"龙眠旅社","type":"folder","children":[{"name":"军营混进来的艺妓，居然是合欢宗女修","type":"folder","children":[{"name":"合欢宗1.mp3","type":"file"},{"name":"合欢宗2.mp3","type":"file"},{"name":"合欢宗3-1.mp3","type":"file"},{"name":"合欢宗3-2.mp3","type":"file"},{"name":"合欢宗4.mp3","type":"file"}]},{"name":"女巫","type":"folder","children":[{"name":"女巫的破魔仪式 -西塘.mp3","type":"file"},{"name":"迷路后遇到了可爱的女巫小姐1 -易枕枕 VIKI 桃乐.mp3","type":"file"},{"name":"迷路后遇到了可爱的女巫小姐2 -易枕枕 VIKI 桃乐.mp3","type":"file"},{"name":"那位面具女巫小姐，你还好吗 -伞伞.mp3","type":"file"}]},{"name":"心理老师的特殊辅导","type":"folder","children":[{"name":"和心理老师一起回家.mp3","type":"file"},{"name":"心理老师的第一次辅导.mp3","type":"file"},{"name":"心理老师的第二次辅导.mp3","type":"file"}]},{"name":"糟糕，要被榨干了","type":"folder","children":[{"name":"糟糕，要被三只小涩狐榨干了1 -小蕊.mp3","type":"file"},{"name":"糟糕，要被三只小涩狐榨干了2 -小蕊.mp3","type":"file"},{"name":"糟糕，要被三只小涩狐榨干了3 -小蕊.mp3","type":"file"}]},{"name":"花径深处的女巫姐妹们","type":"folder","children":[{"name":"花径深处的女巫姐妹们 0.小女巫 -卡卡.mp3","type":"file"},{"name":"花径深处的女巫姐妹们 1.神性巫女 -鲨鲨.mp3","type":"file"},{"name":"花径深处的女巫姐妹们 2.小女巫 -伞伞.mp3","type":"file"},{"name":"花径深处的女巫姐妹们 3.魅惑女巫 -伞伞.mp3","type":"file"},{"name":"花径深处的女巫姐妹们 4.结局.mp3","type":"file"}]},{"name":"训犬师","type":"folder","children":[{"name":"和两位女主人的新婚之夜 训犬师IF线 -伞伞 吱吱.mp3","type":"file"},{"name":"训犬师1 prpr.mp3","type":"file"},{"name":"训犬师1 重制版.mp3","type":"file"},{"name":"训犬师1.mp3","type":"file"},{"name":"训犬师2 被青梅竹马大姐姐发现了我的特殊癖好.mp3","type":"file"},{"name":"训犬师2 被青梅竹马大姐姐发现我的嗜好纯享舔耳.mp3","type":"file"},{"name":"训犬师3.mp3","type":"file"},{"name":"训犬师3-纯享版.mp3","type":"file"},{"name":"训犬师4 舔耳纯享版 -伞伞 吱吱.mp3","type":"file"},{"name":"训犬师4 高冷女上司和活泼女下属的双重调教1 -吱吱.mp3","type":"file"},{"name":"训犬师4 高冷女上司和活泼女下属的双重调教2 -伞伞.mp3","type":"file"},{"name":"训犬师4 高冷女上司和活泼女下属的双重调教3 -吱吱 伞伞.mp3","type":"file"},{"name":"训犬师4 高冷女上司和活泼女下属的双重调教4 -伞伞 吱吱.mp3","type":"file"},{"name":"训犬师4 高冷女上司和活泼女下属的双重调教4 伞伞单人.mp3","type":"file"},{"name":"训犬师4 高冷女上司和活泼女下属的双重调教4 吱吱单人.mp3","type":"file"},{"name":"训犬师5 在更衣室被女下属的耳语言责抖M调教play -伞伞 卡卡 三三.mp3","type":"file"},{"name":"训犬师5 舔耳纯享 -伞伞.mp3","type":"file"},{"name":"训犬师5.mp3","type":"file"},{"name":"训犬师5纯享版.mp3","type":"file"},{"name":"训犬师6(立体声).mp3","type":"file"},{"name":"训犬师6.mp3","type":"file"},{"name":"训犬师6后日谈.mp3","type":"file"},{"name":"训犬师6舔耳纯享版(立体声).mp3","type":"file"},{"name":"训犬师IF线.mp3","type":"file"}]},{"name":"雌小鬼魔物娘","type":"folder","children":[{"name":"糟糕，要被雌小鬼史莱姆娘拿下了（逆ntr 恶堕 口腔） -俞江漪 小蕊.mp3","type":"file"},{"name":"糟糕，要被雌小鬼史莱姆娘拿下了（逆ntr 恶堕 口腔）BE -俞江漪 小蕊.mp3","type":"file"},{"name":"糟糕，要被雌小鬼史莱姆娘拿下了（逆ntr 恶堕 口腔）HE -俞江漪 小蕊.mp3","type":"file"}]},{"name":"魅魔双子","type":"folder","children":[{"name":"魅魔双子想要让我缴械投降 纯享 无人声part1 -VIKI.mp3","type":"file"},{"name":"魅魔双子想要让我缴械投降 纯享 无人声part2 -俞江漪.mp3","type":"file"},{"name":"魅魔双子想要让我缴械投降 纯享 无人声合 -VIKI 俞江漪.mp3","type":"file"},{"name":"魅魔双子想要让我缴械投降part1 母亲部分 -VIKI.mp3","type":"file"},{"name":"魅魔双子想要让我缴械投降part2 女儿部分 -俞江漪.mp3","type":"file"}]},{"name":"龙娘姐姐想把你秘密珍藏","type":"folder","children":[{"name":"结局1 龙娘姐姐想把你「秘密珍藏」.mp3","type":"file"},{"name":"结局2 龙娘姐姐想把你「秘密珍藏」.mp3","type":"file"},{"name":"龙娘姐姐想把你「秘密珍藏」.mp3","type":"file"}]},{"name":"“与其苟延残喘，不如纵情燃烧” -元宵.mp3","type":"file"},{"name":"“医生，我好像疯掉了，你一定可以治好我吧？”（猎奇精神分裂怪核） -咕咕 蕊宝 吱吱 西塘 柒宝 饼干 北村.mp3","type":"file"},{"name":"“哥哥，即使我变成怪物，我也依然爱你” -俞江漪.mp3","type":"file"},{"name":"“在洞穴里面，我看到了 “（灵异 微恐 -小吭叽.mp3","type":"file"},{"name":"“学长，别再欺负我了” -柒宝.mp3","type":"file"},{"name":"“小时候想要成为飞行员，长大后却为了温饱奔波”（doomer） -伞伞.mp3","type":"file"},{"name":"《升空》03集 纪念第一名人类女性登录太空62周年 -火子姐.mp3","type":"file"},{"name":"CV与台本的小秘密 -呜喵.mp3","type":"file"},{"name":"End.1：依然凝望着你……（旅途继续） -伞伞.mp3","type":"file"},{"name":"End.2：即使触不可及（If线，旅途结束） -伞伞.mp3","type":"file"},{"name":"manifest.csv","type":"file"},{"name":"一个机器女仆想要去死 -小吭叽.mp3","type":"file"},{"name":"一封病娇粉丝的骚扰信（自白） -柒宝.mp3","type":"file"},{"name":"一脸嫌弃给你掏耳朵的老板娘喜欢吗？ -炽羽.mp3","type":"file"},{"name":"一起开黑的兄弟居然是军宅美少女，但是战争迫在眉睫了 -三三 北村.mp3","type":"file"},{"name":"一起来清凉一夏吧！（微恐安眠咀嚼音） -音宝.mp3","type":"file"},{"name":"七宗罪之饕餮挚爱 -音宝.mp3","type":"file"},{"name":"下班后该怎么放松呢~当然是吸猫啦 -麦熊.mp3","type":"file"},{"name":"下雨天，当然是来这里睡一觉啦（助眠 哄睡 ASMR 白噪音） -月十一.mp3","type":"file"},{"name":"不存在的女友（病娇沉浸式体验） -俞江漪.mp3","type":"file"},{"name":"不良萝莉的双面人生 -桃乐.mp3","type":"file"},{"name":"与外冷内热的委托人小姐姐被窝洽谈 -三三.mp3","type":"file"},{"name":"与幽灵少女的爱恋 -易枕枕.mp3","type":"file"},{"name":"与弟弟的二人世界 -笑丝酱.mp3","type":"file"},{"name":"与机器人女友的午休时光 -三三.mp3","type":"file"},{"name":"严厉女上司的小秘密 纯享版 -鱼鱼.mp3","type":"file"},{"name":"严厉女上司的小秘密 -鱼鱼.mp3","type":"file"},{"name":"中医小姐姐的采耳 -瑾.mp3","type":"file"},{"name":"亲爱的，你就是我的避风港湾哦 -三三.mp3","type":"file"},{"name":"亲爱的，背着我偷吃，可是要付出代价的哦 -王稀饭.mp3","type":"file"},{"name":"亲爱的学弟，你只能为我一个人弹奏哦 -柒宝.mp3","type":"file"},{"name":"人偶妹妹的梦境安眠服务（按摩掏耳助眠） -易枕枕.mp3","type":"file"},{"name":"人偶少女与义体师（序幕：初见） -卡卡 枯水 蕊宝 饼干.mp3","type":"file"},{"name":"什么？书中的二次元美少女居然活了！ -桃乐.mp3","type":"file"},{"name":"今天在这里睡个好觉吧来自桃乐宝贝的按摩助眠（掏耳 按摩 ASMR -桃乐 易枕枕.mp3","type":"file"},{"name":"今天来讲一个故事吧~（中元节夜话） -元宵.mp3","type":"file"},{"name":"今晚做个好梦吧晚安（助眠｜催眠｜按摩） -吱吱.mp3","type":"file"},{"name":"从现在起，你就是我的宠物了 -蕊宝.mp3","type":"file"},{"name":"以爱之名，你还愿意吗（S向） -蕊宝.mp3","type":"file"},{"name":"作为图书管理员的阴角学姐其实是个笨蛋病娇？ -小蕊.mp3","type":"file"},{"name":"你可爱的人偶活过来了哦 -王稀饭.mp3","type":"file"},{"name":"你始终是我一个人的哦~你的病娇妻子 -呜喵.mp3","type":"file"},{"name":"你家有一只可爱的猫娘请签收 -西塘.mp3","type":"file"},{"name":"你的AI女友不止可爱捏 -桃乐.mp3","type":"file"},{"name":"你的偶像妹妹亲自来照顾你的起居 -小吭叽.mp3","type":"file"},{"name":"你的温暖医生女友 -小饼干.mp3","type":"file"},{"name":"你的耳机里面有一个小精灵哦 -西塘.mp3","type":"file"},{"name":"你的见习偶像女友 -堡贝.mp3","type":"file"},{"name":"你的青春里会不会有这样一个我 -西塘.mp3","type":"file"},{"name":"你被困在3234高地上，前来支援你的苏25也被敌人击落 -土小豆.mp3","type":"file"},{"name":"修仙大成的师妹约你来到了她的洞府 -半月.mp3","type":"file"},{"name":"假装吃瘪的女友，想要 -鲨鲨.mp3","type":"file"},{"name":"做那的事被学姐发现做成了 -小蕊.mp3","type":"file"},{"name":"做饭炒菜然后遇到从良少女（温馨） -蕊宝.mp3","type":"file"},{"name":"偷偷潜入你家的小姐姐 -小饼干.mp3","type":"file"},{"name":"偷心女贼与直男侦探：青光石失窃案（1） -伞伞 VIKI.mp3","type":"file"},{"name":"偷心女贼与直男侦探：青光石失窃案（2） -伞伞 VIKI.mp3","type":"file"},{"name":"傲娇青梅竹马怎么可能退环境！ -小饼干 吱吱.mp3","type":"file"},{"name":"关于我成为了傲娇同桌房东这件事情 -俞江漪.mp3","type":"file"},{"name":"关于我穿越之后遇到的蛇妖医生小姐姐（安眠掏耳） -王稀饭.mp3","type":"file"},{"name":"典狱长的审讯与协议.mp3","type":"file"},{"name":"冰冷富家千金小姐的“恋爱”考验 -云舒.mp3","type":"file"},{"name":"别乱动，让局长大人好好照看受伤的你 -唯迟.mp3","type":"file"},{"name":"别当欧豆豆了，来做 （温柔｜可爱） -音宝.mp3","type":"file"},{"name":"别想从我手中逃掉哦，勇者 -蕊宝.mp3","type":"file"},{"name":"助眠社的双人掏耳安眠服务（掏耳｜按摩｜ASMR） -三三 枯水 饼干.mp3","type":"file"},{"name":"助眠社的双人掏耳服务（掏耳｜助眠） -俞江漪 饼干.mp3","type":"file"},{"name":"助眠社的私人指导part1 -小蕊.mp3","type":"file"},{"name":"助眠社的私人指导part2 -小蕊.mp3","type":"file"},{"name":"助眠社的私人指导part3 -小蕊.mp3","type":"file"},{"name":"医生 你究竟是真实存在，还是我臆想出来的 -桃乐.mp3","type":"file"},{"name":"医生 我好像走不出我的房间了（猎奇） -饼干 音宝.mp3","type":"file"},{"name":"医生姐姐对你的急救治疗 -月十一.mp3","type":"file"},{"name":"千纸鹤，雨天，还有你，都是最好的回忆 -伞伞.mp3","type":"file"},{"name":"原来小姐姐录音时口胡这么可爱 -西塘 呜喵 王稀饭 柒宝.mp3","type":"file"},{"name":"原神 坎蒂丝的黄金梦乡 -音宝.mp3","type":"file"},{"name":"去世的猫猫转生来见你啦（温柔） -俞江漪 月十一 伞伞 卡卡.mp3","type":"file"},{"name":"去见你的异地恋女友 -柒宝.mp3","type":"file"},{"name":"口是心非的傲娇大姐姐 -路钰.mp3","type":"file"},{"name":"只想这样告别，但还是爱你 -西塘.mp3","type":"file"},{"name":"只有你能看到的可爱幽灵女友（温柔｜治愈） -三三.mp3","type":"file"},{"name":"可以和我们一起跨年嘛 双人 -月十一 易枕枕.mp3","type":"file"},{"name":"可否向您借宿一晚呢，官人 -咕咕.mp3","type":"file"},{"name":"可恶，要被健身房大姐姐吃掉了 -咕咕.mp3","type":"file"},{"name":"可爱的后辈能有什么坏心思呢 -饼干.mp3","type":"file"},{"name":"可爱的小师妹对你软磨硬泡只是为了 -柒宝.mp3","type":"file"},{"name":"可爱的班长照顾生病的你~（掏耳助眠） -柒宝.mp3","type":"file"},{"name":"史莱姆技师的按摩服务 -伞伞.mp3","type":"file"},{"name":"合欢宗2.mp3","type":"file"},{"name":"合欢宗3.mp3","type":"file"},{"name":"向黑道御姐俯首称臣吧~（宠溺 甜） -鲨鲨.mp3","type":"file"},{"name":"吸血鬼与侦探 -三三 卡卡.mp3","type":"file"},{"name":"吸血鬼大姐姐的甜蜜陷阱 -吱吱.mp3","type":"file"},{"name":"吸血鬼小姐姐的服务（吸血｜耳部按摩｜安眠｜呼吸声） -易枕枕.mp3","type":"file"},{"name":"吸血鬼小姐想让你留在她身边 -土小豆.mp3","type":"file"},{"name":"吸血鬼顾问和见习侦探小姐（双人） -三三 卡卡.mp3","type":"file"},{"name":"和保镖小姐的最后一夜 -卡卡.mp3","type":"file"},{"name":"和傲娇前辈的极地风雪路 -温之九.mp3","type":"file"},{"name":"和卡芙卡妈妈的真心话大冒险（助眠｜ASMR） -月十一.mp3","type":"file"},{"name":"和可爱女友的房车之旅（甜自然白噪音放松） -王稀饭.mp3","type":"file"},{"name":"和可爱女友的野营之旅 -王稀饭.mp3","type":"file"},{"name":"和可爱学妹的密室逃脱 -王稀饭.mp3","type":"file"},{"name":"和同桌在泳池的偶遇 -西塘.mp3","type":"file"},{"name":"和天然呆小猫一起去旅行吧~ -俞江漪.mp3","type":"file"},{"name":"和女友的治愈雪山之旅，然后悄悄求婚 -月十一.mp3","type":"file"},{"name":"和女友的温泉之旅 -伞伞.mp3","type":"file"},{"name":"和女同学的机场偶遇 -小饼干.mp3","type":"file"},{"name":"和女朋友一起泡温泉 -西塘.mp3","type":"file"},{"name":"和姐姐的长途旅行 -小饼干.mp3","type":"file"},{"name":"和学姐在废弃校舍的小雨天小故事（温柔） 御青穗.mp3","type":"file"},{"name":"和年轻小妈的禁忌之恋 -小代.mp3","type":"file"},{"name":"和年轻小妈的禁忌之恋 第二版 -小代.mp3","type":"file"},{"name":"和幽灵女友的甜蜜二人时光 -三三.mp3","type":"file"},{"name":"和弟控姐姐一起看恐怖电影会发生什么呢 -王稀饭.mp3","type":"file"},{"name":"和我一起堕入到地狱之中吧 -柒宝 咕咕 小饼干.mp3","type":"file"},{"name":"和我对线的网友居然是可爱少女 -小饼干.mp3","type":"file"},{"name":"和新婚妻子的洞房之夜 -呜喵.mp3","type":"file"},{"name":"和树妖小姐姐一起在河边享受轻松时光 -小蕊.mp3","type":"file"},{"name":"和梦中的少女一起在摩天轮上dokidoki -俞江漪.mp3","type":"file"},{"name":"和毒舌女友的火车之旅（治愈 甜） -三三.mp3","type":"file"},{"name":"和猫娘女友卿卿我我的甜腻生活（甜甜甜） -桃乐.mp3","type":"file"},{"name":"和青梅竹马一起过圣诞 -小饼干.mp3","type":"file"},{"name":"和魔法少女在河边散步 -柒宝.mp3","type":"file"},{"name":"哥哥，我的牙齿好看嘛 -柒宝 西塘.mp3","type":"file"},{"name":"哥哥，睡不着嘛？那我们来.数羊吧 -幼月眠眠.mp3","type":"file"},{"name":"喝醉的军犬娘想要和你撒娇1 小犬娘的醉酒告白 -桃乐.mp3","type":"file"},{"name":"喝醉的军犬娘想要和你撒娇2 小犬娘的自刎谢罪 -桃乐.mp3","type":"file"},{"name":"喝醉的军犬娘想要和你撒娇3 来自小犬娘的一封信 -桃乐.mp3","type":"file"},{"name":"喝醉的军犬娘想要和你撒娇3 来自小犬娘的一封信 重置版 -桃乐.mp3","type":"file"},{"name":"喝醉的大姐姐 -吱吱 小饼干.mp3","type":"file"},{"name":"因为台风天不得不和学妹共处一室 -易枕枕.mp3","type":"file"},{"name":"圣诞节和喜欢的女孩子一起坐摩天轮（治愈｜温柔｜甜） -柒宝.mp3","type":"file"},{"name":"在农场遇到的冷酷克里格士兵居然是一个美少女 -伞伞.mp3","type":"file"},{"name":"在咖啡馆偷闲的你思绪总是会飘忽从前的夏天 -花咲 云舒.mp3","type":"file"},{"name":"在地铁上遇到的魅魔少女好像有点不太一样 -小吭叽.mp3","type":"file"},{"name":"在孤独城堡遇到不死不灭小姐姐的我 -西塘.mp3","type":"file"},{"name":"在校医室老师和班长用特（掏）殊（耳）的方法帮我降温（助眠｜asmr） -伞伞 柒宝.mp3","type":"file"},{"name":"在灵异旅馆被吸血鬼御姐囚禁 塞西尔吸血鬼 上 -卡卡.mp3","type":"file"},{"name":"在灵异旅馆被吸血鬼御姐囚禁 塞西尔吸血鬼 下 -卡卡.mp3","type":"file"},{"name":"在直播间退款的下场是 被吃掉哦（vore系 丸吞） -伞伞.mp3","type":"file"},{"name":"在诺文斯克市遇到粉色小狗doro -小吭叽.mp3","type":"file"},{"name":"在酒吧碰到了做酒保的老同学 -唐轻弦.mp3","type":"file"},{"name":"地狱三头犬娘，有三种性格的美少女，你喜欢吗 -西塘.mp3","type":"file"},{"name":"坏了，我的女朋友变两个了！（姐妹花｜逆NTR） -卡卡 吱吱.mp3","type":"file"},{"name":"夏夜学妹的告白？ -柒宝.mp3","type":"file"},{"name":"外星来客的爱欲实验 -卡卡.mp3","type":"file"},{"name":"夜晚敲门的人鱼小姐 -狮宝.mp3","type":"file"},{"name":"夜雨天有姐姐陪睡最棒了 -王稀饭.mp3","type":"file"},{"name":"失意少年会梦到蛇妖少女嘛？ -易枕枕.mp3","type":"file"},{"name":"失控的机关娘想要彻底占有你 -伞伞 小吭叽 俞江漪 小蕊.mp3","type":"file"},{"name":"女上司仿生人.mp3","type":"file"},{"name":"女上司送醉酒你的回家 -土小豆.mp3","type":"file"},{"name":"女仆咖啡店的龙娘与晚霞 -路珏.mp3","type":"file"},{"name":"女友曾是个病娇（整活 甜 HE） -桃乐.mp3","type":"file"},{"name":"女总裁严厉惩戒犯错的你 -黎晚晚.mp3","type":"file"},{"name":"女杀手的调教play -小饼干.mp3","type":"file"},{"name":"她和他的孤独摇滚 -吱吱 花咲.mp3","type":"file"},{"name":"姐姐.....请带我离开好不好 -鲨鲨 卡卡 伞伞.mp3","type":"file"},{"name":"姐姐偶尔也需要你的安慰啦 -蕊宝.mp3","type":"file"},{"name":"姐姐教你写！台！本！ -呜喵.mp3","type":"file"},{"name":"学妹的坏心思，还能是什么呢（哄睡｜助眠） -蕊宝.mp3","type":"file"},{"name":"学姐，请不要捉弄我了！ -俞江漪.mp3","type":"file"},{"name":"学弟你在星空下的样子真美 -小饼干.mp3","type":"file"},{"name":"学校的学姐要当我的贴身女仆！（助眠 ASMR 女仆play） -小蕊.mp3","type":"file"},{"name":"学长，你也不想奇怪的秘密被说出去吧 -伞伞.mp3","type":"file"},{"name":"宝贝，妈妈会一直爱你的（温柔｜甜｜治愈） -卡卡 柒宝.mp3","type":"file"},{"name":"审讯 别想从我手上逃走哦，老师 -小饼干 咕咕.mp3","type":"file"},{"name":"寒冷冬夜让女朋友来给你暖床吧 -小饼干.mp3","type":"file"},{"name":"对你严厉的女上司居然会这样（倒数） -MissLoco.mp3","type":"file"},{"name":"小女仆对主人充满爱意的侍奉 -黎晚晚.mp3","type":"file"},{"name":"小姐姐在你耳边倒数 重庆话版（倒数｜言责｜整活） -伞伞.mp3","type":"file"},{"name":"小富婆房东的恋爱抵押（舔耳足play） -桃乐.mp3","type":"file"},{"name":"小心哦~八尺大人要把你吃掉喽 -月十一.mp3","type":"file"},{"name":"小恶魔学妹不肯放过我，居然 -桃乐.mp3","type":"file"},{"name":"就算粉身碎骨，也要在天空翱翔 -小吭叽 伞伞.mp3","type":"file"},{"name":"就让身为修女的我，带你一起堕入欲望的深渊吧 -卡卡.mp3","type":"file"},{"name":"就这样送别你，直到下次相见 -狮宝.mp3","type":"file"},{"name":"居然想让吸血鬼萝莉爱上我？ -易枕枕.mp3","type":"file"},{"name":"帮你解压的导员 -唐轻弦.mp3","type":"file"},{"name":"平时冰冷毒舌的女仆在听到你有婚约后居然 -云舒.mp3","type":"file"},{"name":"年轻的狼啊，你要学的还很多（年轻蝴蝶夫人x幼年狼） -柒宝 北村.mp3","type":"file"},{"name":"幽灵娘.MP3","type":"file"},{"name":"幽灵娘失败结局.MP3","type":"file"},{"name":"幽灵娘逃脱结局.MP3","type":"file"},{"name":"幽灵小姐.mp3","type":"file"},{"name":"幽灵小姐后日谈 -三三.mp3","type":"file"},{"name":"归京书生路遇荒村妖妇（微恐 灵异 中式恐怖） 月十一 小饼干 Z宝.mp3","type":"file"},{"name":"当你在女仆店遇到前任 -瑾.mp3","type":"file"},{"name":"当你将恶贯满盈的魔法师逼入死境 -伞伞.mp3","type":"file"},{"name":"当你驾驶最后一架su27冲入敌阵时，脑海里响起了那首歌 伞伞 Z宝 -北村 沐沐子 三三 月十一.mp3","type":"file"},{"name":"当流浪小猫遇到美少女 -饼干.mp3","type":"file"},{"name":"彻底感官控制新手特工陷入坏姐姐快感地狱 -鱼鱼.mp3","type":"file"},{"name":"御姐魅魔想把你吃干抹净 -卡卡.mp3","type":"file"},{"name":"性感导员，在线辅导考研 -呜喵.mp3","type":"file"},{"name":"性格很s的学姐想要让我？ -蕊宝.mp3","type":"file"},{"name":"恋爱期约舔耳 -桃乐.mp3","type":"file"},{"name":"想要和你一起成为白日梦想家！（甜甜甜｜温馨） -桃乐.mp3","type":"file"},{"name":"想要和你结婚纯享版 -桃乐.mp3","type":"file"},{"name":"成为你的专属老板娘 -柒宝.mp3","type":"file"},{"name":"我们一定可以上月球的，对吧，大卫 -VIKI (2).mp3","type":"file"},{"name":"我会一直陪着你的哦，客人（助眠｜治愈｜温馨） -易枕枕.mp3","type":"file"},{"name":"我会好好倾听你的烦恼哦 -柒宝.mp3","type":"file"},{"name":"我会让您好好的放松一下哦先生（助眠师系列） -小饼干.mp3","type":"file"},{"name":"我希望，醒来时你在我身边（治愈） -半月.mp3","type":"file"},{"name":"我想在雨天和你同撑一把伞（甜甜甜｜白噪音） -易枕枕.mp3","type":"file"},{"name":"我的女上司居然是魅魔？ -VIKI (2).mp3","type":"file"},{"name":"我的女朋友好像变成了史莱姆娘？ -俞江漪.mp3","type":"file"},{"name":"我的闺蜜居然是？ -西塘.mp3","type":"file"},{"name":"我这次真的很想你，所以可以？ -王稀饭.mp3","type":"file"},{"name":"战争中没有女人的面容 -小饼干.mp3","type":"file"},{"name":"战争结束了，但是姐姐永远也回不来了 -三三 小吭叽.mp3","type":"file"},{"name":"战锤40K 感受这无尽的欢愉吧~士兵 -伞伞.mp3","type":"file"},{"name":"战锤40K剧情向 在花园世界遇到了去世的姐姐，但是总感觉很奇怪 -三三.mp3","type":"file"},{"name":"抖M反差女教师的课后侍奉（S向 反差） -桃乐.mp3","type":"file"},{"name":"抖M女教师的课后侍奉 -桃乐.mp3","type":"file"},{"name":"拼命求饶的猫又小可爱 -俞江漪.mp3","type":"file"},{"name":"拼命求饶的猫又小可爱特典 -俞江漪.mp3","type":"file"},{"name":"拼命求饶的猫又小可爱纯享版 -俞江漪.mp3","type":"file"},{"name":"按摩师小姐姐想要帮你入睡 -唯迟.mp3","type":"file"},{"name":"捡到一只可爱的吸血鬼 -西塘.mp3","type":"file"},{"name":"救命，我被病娇Vtuber绑架了！（病娇） -卡卡.mp3","type":"file"},{"name":"新上任的女皇想要和你卿卿我我 -鲨鲨.mp3","type":"file"},{"name":"新上任的皇女想要和你卿卿我我 -鲨鲨.mp3","type":"file"},{"name":"新年夜，青梅大姐姐的安慰 -咕咕.mp3","type":"file"},{"name":"新来的舞蹈老师，居然是我的 （主仆｜字母｜橘里橘气） -王稀饭 桃乐 月十一.mp3","type":"file"},{"name":"日本泡沫经济下和公关小姐的情愫 -土小豆.mp3","type":"file"},{"name":"早坂爱小姐想让我早睡 -吱吱.mp3","type":"file"},{"name":"时不时用粤语小声说真心话的可爱女同学 -西塘.mp3","type":"file"},{"name":"普通勇者的冒险：治疗师小姐姐的助眠掏耳（助眠 掏耳） -小吭叽.mp3","type":"file"},{"name":"有一个可爱的宅女老师是一种什么体验 -蕊宝.mp3","type":"file"},{"name":"有一个笨蛋女友是怎么样的体验 -三三.mp3","type":"file"},{"name":"杂鱼大叔，快点起床啦雌小鬼的叫醒服务 -俞江漪.mp3","type":"file"},{"name":"来自OL前女友的内心告白 -柒宝.mp3","type":"file"},{"name":"来自吸血鬼姐妹的监禁哦 -柒宝 呜喵.mp3","type":"file"},{"name":"来自幽灵女友的安慰（掏耳｜耳部按摩｜助眠） -易枕枕.mp3","type":"file"},{"name":"来自病娇跟踪狂女友的独白（病娇 反转） -桃乐.mp3","type":"file"},{"name":"来自被你俘虏的兔娘舰长的掏耳服务（助眠｜掏耳｜哄睡） -桃乐.mp3","type":"file"},{"name":"来自被你欺凌过的御姐学生的丝足“特调” -鱼鱼.mp3","type":"file"},{"name":"来自铁卫特种部队前女友的特别女仆行动（赛博朋克 甜剧情 搞笑 -卡卡.mp3","type":"file"},{"name":"来自青梅竹马姐姐的告白耳舔服务 -纸鸢sama.mp3","type":"file"},{"name":"梅雨绵绵心中愁 -她放慢步调.mp3","type":"file"},{"name":"梦想破碎之后，我们逃离了东京 -伞伞 卡卡 麦熊 北村.mp3","type":"file"},{"name":"毒舌腹黑女友对你的“拷打”（甜｜治愈） -鲨鲨.mp3","type":"file"},{"name":"水族馆学姐的告白（甜甜甜） -桃乐.mp3","type":"file"},{"name":"浑身湿透的青梅姐姐想要在你家借宿一晚 原版 -小代.mp3","type":"file"},{"name":"浑身湿透的青梅姐姐想要在你家借宿一晚 第二版 -小代.mp3","type":"file"},{"name":"涩涩纯享版 -卡卡.mp3","type":"file"},{"name":"深夜里，当然是该做点成年人做的事情了 -麦麦.mp3","type":"file"},{"name":"深海之下，到底是什么呢？（深海恐惧症鲸鱼声潜艇白噪音猎奇） -VIKI.mp3","type":"file"},{"name":"清冷女仙竟是合欢宗邪修1.mp3","type":"file"},{"name":"清姬：我愿和你一生一世 -呜喵.mp3","type":"file"},{"name":"温柔女总裁的陷阱，要小心别被吃掉哦 -蕊宝.mp3","type":"file"},{"name":"灰之魔女的美梦小屋，祝你有一个良好的睡眠（助眠｜哄睡｜掏耳） -饼干.mp3","type":"file"},{"name":"照顾可爱的小犬娘 -瑾.mp3","type":"file"},{"name":"爱死亡和机器人之齐马蓝2 -呜喵.mp3","type":"file"},{"name":"爱死亡和机器人之齐马蓝3 -柒宝 hokori.mp3","type":"file"},{"name":"爱死亡和机器人之齐马蓝5 -呜喵.mp3","type":"file"},{"name":"爱死亡机器人中评分最高的一集，齐马蓝1 -柒宝.mp3","type":"file"},{"name":"独自漫步月球，地球是回不去的家乡 -月十一.mp3","type":"file"},{"name":"现在您知道一俄里有多远了吗？ -麦熊.mp3","type":"file"},{"name":"甜美学妹一起数星空 故乡(一) -小饼干.mp3","type":"file"},{"name":"甜美学妹一起数星空 故乡(三) -小饼干.mp3","type":"file"},{"name":"甜美学妹一起数星空 故乡(二) -小饼干.mp3","type":"file"},{"name":"病娇妻子对你的特殊爱恋 -俞江漪.mp3","type":"file"},{"name":"病娇少女的千层套路 -团子.mp3","type":"file"},{"name":"登王失败的褪色者被菈妮发现（助眠 甜甜甜） -易枕枕.mp3","type":"file"},{"name":"白发三无魔法少女和我的奇妙冒险 -小饼干.mp3","type":"file"},{"name":"皮裤胡同之狐妖奇案 -三三 小蕊.mp3","type":"file"},{"name":"监控AI会理解人类的爱意嘛？（未来向 AI） -小蕊 柒宝.mp3","type":"file"},{"name":"睡不着的话，就来一起数质数吧 -易枕枕.mp3","type":"file"},{"name":"研究按摩的女研究生打算拿你试试手 -麦麦 柒宝.mp3","type":"file"},{"name":"社恐梦魇彩蛋 -易枕枕.mp3","type":"file"},{"name":"社恐梦魇想要和你一起睡大觉 -易枕枕.mp3","type":"file"},{"name":"神秘白发少女的掏耳 -易枕枕.mp3","type":"file"},{"name":"秋风瑟瑟离人愁 -念云.mp3","type":"file"},{"name":"科幻向 我将燃烧900s，为你照亮前进的道路 土小豆 柒宝 俞江漪 常眠 -三三 沐沐子.mp3","type":"file"},{"name":"秘书哥哥，你也不想上班摸鱼的事情被妈妈知道吧 -俞江漪.mp3","type":"file"},{"name":"究极理科生女友，也太可爱了吧 -柒宝.mp3","type":"file"},{"name":"第四层没有光哦，学长 -伞伞.mp3","type":"file"},{"name":"纯爱少爷迎娶笨蛋女仆 -桃乐.mp3","type":"file"},{"name":"纽特，妈妈永远爱你（空间站白噪音耳骚安眠） -柒宝.mp3","type":"file"},{"name":"美少女死神的kpi总是完不成（甜｜治愈｜温暖） -音宝.mp3","type":"file"},{"name":"羞涩的助眠师小姐姐想要帮你入睡（掏耳 按摩 ASMR -三三.mp3","type":"file"},{"name":"能给我来一杯咖啡吗 -柒宝.mp3","type":"file"},{"name":"腹黑学姐强迫的女装play -咕咕.mp3","type":"file"},{"name":"臭哥哥就这么想吃人家的冰淇淋嘛 （甜 搞笑 -俞江漪 三三.mp3","type":"file"},{"name":"舞蹈队学姐想要把你秘密占有part1 -花咲 卡卡.mp3","type":"file"},{"name":"舞蹈队学姐想要把你秘密占有part2 -卡卡 花咲.mp3","type":"file"},{"name":"舞蹈队学姐想要把你秘密占有part3（彩蛋） -伞伞.mp3","type":"file"},{"name":"艾丝妲站长的中饱私囊 -三三 小饼干.mp3","type":"file"},{"name":"花魁小姐姐的亲密接触 -小蕊.mp3","type":"file"},{"name":"落入了花妖的幼儿退化陷阱（口腔音 触手）be结尾 -小代 小蕊.mp3","type":"file"},{"name":"落入了花妖的幼儿退化陷阱（口腔音 触手）ne结局 -小代 小蕊.mp3","type":"file"},{"name":"虽然我走不进你的心，但是我想要爱你 -卡卡.mp3","type":"file"},{"name":"蛇发妖.MP3","type":"file"},{"name":"蛇发妖结局1.MP3","type":"file"},{"name":"蛇发妖结局2.MP3","type":"file"},{"name":"蛇妖女仆想要和你 -小蕊.mp3","type":"file"},{"name":"血族人偶的甜蜜陷阱 -小饼干.mp3","type":"file"},{"name":"血族人偶舔耳纯享版 -小饼干.mp3","type":"file"},{"name":"血族姐姐的秘密登月任务 -伞伞 三三.mp3","type":"file"},{"name":"被Alpha下属发现了自己的小秘密 -云舒.mp3","type":"file"},{"name":"被你牵着的抖M女友，渴求更多的惩罚 想要和你结婚 -桃乐.mp3","type":"file"},{"name":"被夜店性感小姐姐盯上的我 -呜喵.mp3","type":"file"},{"name":"被姐姐捡回家以后 -柒宝.mp3","type":"file"},{"name":"被灌醉然后强吻暗恋我的学姐 -西塘.mp3","type":"file"},{"name":"褪色者，让我来治愈你吧（安眠耳部按摩） -元宵.mp3","type":"file"},{"name":"要吃掉你了哦，同学 -小蕊.mp3","type":"file"},{"name":"要小心哦~不然会被蜘蛛娘吸干 -吱吱.mp3","type":"file"},{"name":"要把你吃掉了哦~同学 -小蕊.mp3","type":"file"},{"name":"让我来给你补补课吧，学长（小恶魔｜调戏） -俞江漪.mp3","type":"file"},{"name":"让我给你一个美梦吧 -王稀饭.mp3","type":"file"},{"name":"许久未见的情人居然是来暗杀你的女特工 -卡卡 伞伞 北村.mp3","type":"file"},{"name":"该怎么留下你，伊里奇同志1 -伞伞.mp3","type":"file"},{"name":"该怎么留下你，伊里奇同志2 -伞伞.mp3","type":"file"},{"name":"请你收下我腐烂的爱吧，逃走也是不行的哦 -唯迟 土小豆 卡卡.mp3","type":"file"},{"name":"请问您要去斯卡布罗集市吗 -三三.mp3","type":"file"},{"name":"读一读你们的评论 -西塘.mp3","type":"file"},{"name":"谢谢你同志，让我看到了这般美丽的光景（察里津保卫战） -俞江漪.mp3","type":"file"},{"name":"赛博朋克向 成为新手特工！来自稽查局女上司关怀安慰 -唯迟.mp3","type":"file"},{"name":"载人航天主题音声 《升空》02集 -火子姐.mp3","type":"file"},{"name":"过了今晚就不能回去见你的女朋友了（病娇 逆ntr m向） -小蕊.mp3","type":"file"},{"name":"还君明珠双泪垂，恨不相逢未嫁时 -柒宝.mp3","type":"file"},{"name":"这一次让我来守护你，上校 -小吭叽.mp3","type":"file"},{"name":"这么硬的话，就应该被锁住哦 -鱼鱼.mp3","type":"file"},{"name":"这样可爱的学妹，你喜欢吗？ -麦熊.mp3","type":"file"},{"name":"这样的话，亲爱的就不会离开我了（病娇） -蕊宝.mp3","type":"file"},{"name":"这次不会放开你啦【百合】 -吱吱 咕咕.mp3","type":"file"},{"name":"遇到你之后，我才对生活有了期望（治愈｜甜｜病弱） -桃乐.mp3","type":"file"},{"name":"酒吧的老板姐姐与辞职的你的邂逅 -小蕊.mp3","type":"file"},{"name":"酒吧遇到的大姐姐居然想把你吃掉（猎奇） -吱吱 小饼干.mp3","type":"file"},{"name":"重组家庭的大姐姐想要帮我 -吱吱.mp3","type":"file"},{"name":"防火女小姐姐带给你的治愈体验（耳骚按摩}耳语安眠） -易枕枕.mp3","type":"file"},{"name":"隔壁的大姐姐好像有点不太对劲 微恐 -月十一.mp3","type":"file"},{"name":"震惊，原来cv和后期是这样沟通的 -呜喵.mp3","type":"file"},{"name":"青梅竹马vs女上司的修罗场 -卡卡 俞江漪.mp3","type":"file"},{"name":"青梅竹马vs女上司的修罗场 赠品 -卡卡 俞江漪.mp3","type":"file"},{"name":"青梅竹马必须赢麻了大作战！赢！ -西塘 桃乐.mp3","type":"file"},{"name":"青梅竹马的公路之旅 -小饼干.mp3","type":"file"},{"name":"风情万种的醉酒女教授 -饼干.mp3","type":"file"},{"name":"饮尽孟婆汤，却还是忘不了你 -柒宝.mp3","type":"file"},{"name":"魔法老师和她不成器的徒弟（安眠瑟濂同人） -柒宝.mp3","type":"file"},{"name":"魔物娘大结局.MP3","type":"file"}]},{"name":"manifest.csv","type":"file"}]},{"name":"听晚","type":"folder","children":[{"name":"【b站催眠听晚】小魔女的试炼.mp3","type":"file"},{"name":"【b站催眠听晚】邪恶魔女的催眠.mp3","type":"file"},{"name":"【催眠听晚】  勇者.mp3","type":"file"},{"name":"【催眠听晚】 女仆店兼职.mp3","type":"file"},{"name":"【催眠听晚】催眠.mp3","type":"file"},{"name":"【催眠听晚】催眠审讯.mp3","type":"file"},{"name":"【催眠听晚】女王的骑士，要在需要时有各种小狗妙用~puppy puppy happy♥！.mp3","type":"file"},{"name":"【催眠听晚】美女教主.mp3","type":"file"},{"name":"催眠听晚 CS就被关在铁笼子里.mp3","type":"file"},{"name":"催眠听晚 女仆店兼职.mp3","type":"file"},{"name":"催眠听晚 完了，坏姐姐把你吃干抹净.mp3","type":"file"},{"name":"催眠听晚 小妈那不可抵挡高跟鞋声~.mp3","type":"file"},{"name":"催眠听晚 新婚夫妻.mp3","type":"file"},{"name":"催眠听晚 欢迎进入，没羞没臊的婚后甜蜜….mp3","type":"file"},{"name":"催眠听晚 黑丝女秘书的贴心服务.mp3","type":"file"},{"name":"催眠听晚_作为宇宙飞船发电机被触手意识侵占.mp3","type":"file"},{"name":"勇者后记.mp3","type":"file"},{"name":"勇者终章.mp3","type":"file"},{"name":"勇者败北 2 听晚.mp3","type":"file"},{"name":"女上司的魅力2.mp3","type":"file"},{"name":"女王学院.wav","type":"file"},{"name":"妮可船长 【b站催眠听晚】触手怪的意识侵占.mp3","type":"file"},{"name":"师尊.mp3","type":"file"},{"name":"真解除部分.mp3","type":"file"},{"name":"空白人偶.mp3","type":"file"}]},{"name":"咪啪（王女）","type":"folder","children":[{"name":"神推","type":"folder","children":[{"name":"1·成为疲惫的她的麦克风.mp3","type":"file"},{"name":"2·喜欢喜欢催眠引发的雄竞榨金.mp3","type":"file"},{"name":"3`直播的背后.mp3","type":"file"},{"name":"4·1v1的寸止榨金（公开服从的标记）.mp3","type":"file"},{"name":"5·催眠后暗示·幸福日记.mp3","type":"file"}]},{"name":"三只小猫（重制）.mp3","type":"file"},{"name":"公开课上被催眠控制、咪啪啪.mp3","type":"file"},{"name":"天使恶魔去重.mp3","type":"file"},{"name":"妹妹的水晶球.mp3","type":"file"},{"name":"妹妹的阴谋_缩混2.mp3","type":"file"},{"name":"小恶魔妹妹cv：咪啪.mp3","type":"file"},{"name":"小恶魔梦子.mp3","type":"file"},{"name":"小恶魔梦子2.mp3","type":"file"},{"name":"小恶魔梦子3.wav","type":"file"},{"name":"小恶魔梦子4.wav","type":"file"},{"name":"幻夜馆—咪啪.mp3","type":"file"},{"name":"献上灵魂归于混沌-咪啪.mp3","type":"file"},{"name":"玩伴.mp3","type":"file"},{"name":"白日女仆.mp3","type":"file"},{"name":"藤蔓大姐姐.mp3","type":"file"},{"name":"诱捕器-拉莱耶王女.mp3","type":"file"},{"name":"邻居姐姐1.1ver.mp3","type":"file"},{"name":"魔道玩偶.mp3","type":"file"},{"name":"黑夜女仆.mp3","type":"file"}]},{"name":"工坊","type":"folder","children":[{"name":"Z1 按摩师的催眠 -三酒.mp3","type":"file"},{"name":"Z10睡眠意识实验\u0026amp;快乐\u0026amp;控制.mp3","type":"file"},{"name":"Z11 催眠 魅魔姐姐的私密人生支配 -三酒.mp3","type":"file"},{"name":"Z13蛇妖姐姐的快乐净土.mp3","type":"file"},{"name":"Z14 邪恶学姐的宠物化催眠控制 -三酒.mp3","type":"file"},{"name":"Z15催眠\u0026amp;TK！看守魔物姐姐！可一定要当心啊！被催眠了可就.mp3","type":"file"},{"name":"Z16御姐孟婆的蛊惑汤药，饮下即入迷离失控之境.mp3","type":"file"},{"name":"Z17 催眠TK沦陷在审讯官姐姐的训诫中 -三酒.mp3","type":"file"},{"name":"Z18脑内入侵.mp3","type":"file"},{"name":"Z19调音师的催眠节拍掌控.mp3","type":"file"},{"name":"Z1按摩师的催眠.mp3","type":"file"},{"name":"Z2 腹黑学的催眠占有 -夭夭.mp3","type":"file"},{"name":"Z20盗画反陷止寸催眠：放过？是无线循环！.mp3","type":"file"},{"name":"Z21 被健身教的催眠课程耗尽体力 -三酒.mp3","type":"file"},{"name":"Z22魔物的极乐报恩.mp3","type":"file"},{"name":"Z23 黑暗餐厅的催眠预制（标准版）-三酒.mp3","type":"file"},{"name":"Z23黑暗餐厅的催眠预制（混乱版）.mp3","type":"file"},{"name":"Z24 圣师双子催眠（标准版）-三酒 夭夭.mp3","type":"file"},{"name":"Z24 圣师双子催眠（混乱版）-三酒 夭夭 - Copy.mp3","type":"file"},{"name":"Z24 圣师双子催眠（混乱版）-三酒 夭夭.mp3","type":"file"},{"name":"Z25 修女的甜蜜惩戒.mp3","type":"file"},{"name":"Z25修忏悔室（混乱版）.mp3","type":"file"},{"name":"Z26 深海迷醉美人鱼.mp3","type":"file"},{"name":"Z27 开盒催眠主播的下场（混乱版）.mp3","type":"file"},{"name":"Z28病娇学×腹黑小的温柔陷阱.mp3","type":"file"},{"name":"Z29石墨(1).mp3","type":"file"},{"name":"Z3 超级智能~给你纯粹的快感体验 -三酒.mp3","type":"file"},{"name":"Z30学姐的心理学实验.mp3","type":"file"},{"name":"Z31独目幻羽鸟.mp3","type":"file"},{"name":"Z32禁忌三杯酒：从渐入到挚爱.mp3","type":"file"},{"name":"Z33主治医生的催眠临界点特训.mp3","type":"file"},{"name":"Z34让花艺师姐姐的剪刀，修剪掉你最后一点抵抗.mp3","type":"file"},{"name":"Z35当你的上司对你按下暂停键.mp3","type":"file"},{"name":"Z36魔的婚-陷阱.mp3","type":"file"},{"name":"Z37同学你被选中了！失控体验！ (1).mp3","type":"file"},{"name":"Z38.她的诊断书：白色房间的精神支配.mp3","type":"file"},{"name":"Z39学姐的忍耐练习通话.mp3","type":"file"},{"name":"Z4 杀手姐姐的催眠培训 -夭夭.mp3","type":"file"},{"name":"Z5 蛇妖的魅惑催眠幻术 -三酒.mp3","type":"file"},{"name":"Z7 智能助手の治愈催眠放松~ -三酒.mp3","type":"file"},{"name":"Z8温柔友的催眠调教_变成妖妖主人快乐的玩具吧_.mp3","type":"file"},{"name":"Z9 魔教妖的暗中潜入~催眠沦陷~ -三酒.mp3","type":"file"},{"name":"一千聆依夜.mp3","type":"file"}]},{"name":"幽荧","type":"folder","children":[{"name":"J001【贩售向催眠音声】被神秘的狐仙大姐姐抓住玩弄_1.mp3","type":"file"},{"name":"J002【贩售】上门服装推销员幽荧，其实卖的都是触手服_.mp3","type":"file"},{"name":"J003 学妹系列1：被学妹支配的提线木偶.mp3","type":"file"},{"name":"J004【贩售】学妹专属的椅子.mp3","type":"file"},{"name":"J005 抖m足控老师的噩梦-丝袜人偶处刑.mp3","type":"file"},{"name":"J006【贩售】狐妖姐姐的反杀催眠与铃铛契约_无损.wav","type":"file"},{"name":"J007【贩售】学妹三物化催眠：成为学妹的毛茸茸.mp3","type":"file"},{"name":"J008【贩售】女仆与巨大娘的足调催眠-无损.wav","type":"file"},{"name":"J009【贩售】对恶魔姐姐尽情的撒娇吧.mp3","type":"file"},{"name":"J010【贩售】实验室制取猫猫.mp3","type":"file"},{"name":"J010【赠品】呼噜呼噜小猫咪.mp3","type":"file"},{"name":"J011【贩售】空乘的私人调教.mp3","type":"file"},{"name":"J012【贩售】乖孩子的洗脑触发_-三酉酒.mp3","type":"file"},{"name":"J013【贩售】海蛞蝓的粘腻爱巢.mp3","type":"file"},{"name":"幽荧掏耳朵asmr_无损.wav","type":"file"}]},{"name":"柳柳","type":"folder","children":[{"name":"ruined orgasm（非催眠）","type":"folder","children":[{"name":"ruined orgasm","type":"folder","children":[{"name":"1导入.mp3","type":"file"},{"name":"2破坏式高潮.mp3","type":"file"},{"name":"3失败.mp3","type":"file"}]}]},{"name":"【柳】冬季的催眠体验.mp3","type":"file"},{"name":"5_6095636616930396887.mp3","type":"file"},{"name":"不要坏掉的催眠.mp3","type":"file"},{"name":"半自动舒服的方式舒服起来.mp3","type":"file"},{"name":"双子催眠.mp3","type":"file"},{"name":"在催眠控制下全自动地舒服起来.mp3","type":"file"},{"name":"女仆咖啡馆～柳柳.mp3","type":"file"},{"name":"帮忙搬书甜蜜催眠.mp3","type":"file"},{"name":"建立奇怪的条件反射1.05.mp3","type":"file"},{"name":"心理委员用催眠的方法治疗舞台恐惧呀_01.mp3","type":"file"},{"name":"旅行中的催眠.mp3","type":"file"},{"name":"柳柳 不要坏掉的催眠.mp3","type":"file"},{"name":"柳柳 冬季的催眠体验.mp3","type":"file"},{"name":"柳柳 半自动舒服的方式舒服起来.mp3","type":"file"},{"name":"柳柳 双子催眠.mp3","type":"file"},{"name":"柳柳 在催眠控制下全自动地舒服起来.mp3","type":"file"},{"name":"柳柳 在心理咨询室被催眠玩坏了.mp3","type":"file"},{"name":"柳柳 女仆咖啡馆～.mp3","type":"file"},{"name":"柳柳 建立奇怪的条件反射1.05.mp3","type":"file"},{"name":"柳柳 用舒服的暗示把大脑混在一起.mp3","type":"file"},{"name":"柳柳 用舒服的暗示把心填满吧.mp3","type":"file"},{"name":"柳柳 第二个奇怪的东西V1.02.mp3","type":"file"},{"name":"柳柳 被催眠成可爱的猫猫了.mp3","type":"file"},{"name":"柳柳 被喜欢的同学在房间催眠.mp3","type":"file"},{"name":"柳柳 被社团的学姐变成奇怪的玩具了.mp3","type":"file"},{"name":"柳柳_用舒服的暗示把大脑混在一起（减小效果音_2mp3.mp3","type":"file"},{"name":"用故事的方法玩坏了（入眠版）.mp3","type":"file"},{"name":"神秘社团的催眠.mp3","type":"file"},{"name":"第二个奇怪的东西V1.02.mp3","type":"file"},{"name":"精灵的催眠.mp3","type":"file"},{"name":"被催眠成可爱的人偶了.mp3","type":"file"},{"name":"被催眠成可爱的猫猫了.mp3","type":"file"},{"name":"被社团的学姐变成奇怪的玩具了.mp3","type":"file"},{"name":"讲故事玩坏了(1).mp3","type":"file"},{"name":"魅魔的催眠.mp3","type":"file"}]},{"name":"红茶","type":"folder","children":[{"name":"【1-4集合版】不语，梦中姐姐的响石采耳.mp3","type":"file"},{"name":"【主播的堕域奴隶】.mp3","type":"file"},{"name":"【互助会二】.mp3","type":"file"},{"name":"【催眠红茶】催眠冬日温泉之旅-清冷.mp3","type":"file"},{"name":"【催眠红茶】催眠女仆的枕边服侍二-凊泠.mp3","type":"file"},{"name":"【催眠红茶】催眠幻梦蛇仙-三酒.mp3","type":"file"},{"name":"【催眠红茶】催眠无法思考的雕像-三酒.mp3","type":"file"},{"name":"【催眠红茶】催眠荒诞无度的魔术师一-清冷.mp3","type":"file"},{"name":"【催眠红茶】催眠荒诞无度的魔术师贰-清冷.mp3","type":"file"},{"name":"【冬日温泉之旅】.mp3","type":"file"},{"name":"【女仆的枕边服侍三】.mp3","type":"file"},{"name":"【引入〇梦的寐魔】.mp3","type":"file"},{"name":"【引入〇梦的寐魔·二】.mp3","type":"file"},{"name":"【恶役学妹的条件反射支配】.mp3","type":"file"},{"name":"【抚慰小猫抱枕的低吟】.mp3","type":"file"},{"name":"【提线木偶】.mp3","type":"file"},{"name":"【无法思考的催眠雕像二】.mp3","type":"file"},{"name":"【极乐净土】.mp3","type":"file"},{"name":"【正篇1_4整合版】【DLC】【减弱鲸鸣，减弱背景音版本】.mp3","type":"file"},{"name":"【正篇1_4整合版】幻梦的蓝鲸少女，海与鲸歌的浪漫.mp3","type":"file"},{"name":"【美少女学姐的训犬管教】（结局一）.mp3","type":"file"},{"name":"【美少女学姐的训犬管教】（结局二）.mp3","type":"file"},{"name":"【美少女学姐的足下收服】1.mp3","type":"file"},{"name":"【荒诞无度的魔术师叁】.mp3","type":"file"},{"name":"【触手调教室】.mp3","type":"file"},{"name":"一往无前.（成年人的快乐）.mp3","type":"file"},{"name":"催眠红茶_【催眠术视频】看这里……亲爱的_｜_手势催眠_｜水晶球催眠｜催眠螺旋｜.m4a","type":"file"},{"name":"堕落天使的诱惑.mp3","type":"file"},{"name":"夜城moon_馍馍_触手服.mp3","type":"file"},{"name":"女仆催眠2.mp3","type":"file"},{"name":"子不言吾不语清晰梦催眠.mp3","type":"file"},{"name":"正篇1.幻梦中，和你相遇的故事.mp3","type":"file"},{"name":"正篇2.姐姐与海.mp3","type":"file"},{"name":"正篇3.海与鲸歌，幻梦的催眠.mp3","type":"file"},{"name":"正篇4.鲸落的温柔，带着我的祝福醒来吧.mp3","type":"file"},{"name":"特典1.在海滩上，不语姐姐的甜蜜吹耳朵.mp3","type":"file"},{"name":"特典2.寝息音，在海边拥着你入眠.mp3","type":"file"},{"name":"特典3.沙子安摩，防晒油混合海沙按摩耳朵.mp3","type":"file"}]}]}};
+    const BACKEND_REVIEW = {"wanted":[],"unwanted":[],"missing":["z40# 在这里填写缺少的文件名，一行一个。"]};
+
+    const fileCount = document.getElementById("fileCount");
+    const folderCount = document.getElementById("folderCount");
+    const generatedAt = document.getElementById("generatedAt");
+    const query = document.getElementById("query");
+    const clear = document.getElementById("clear");
+    const summary = document.getElementById("summary");
+    const results = document.getElementById("results");
+    const treeRoot = document.getElementById("tree");
+    const wantedList = document.getElementById("wantedList");
+    const unwantedList = document.getElementById("unwantedList");
+    const missingList = document.getElementById("missingList");
+    const wantedCount = document.getElementById("wantedCount");
+    const unwantedCount = document.getElementById("unwantedCount");
+    const missingCount = document.getElementById("missingCount");
+
+    fileCount.textContent = INDEX_DATA.files.toLocaleString("zh-CN");
+    folderCount.textContent = INDEX_DATA.folders.toLocaleString("zh-CN");
+    generatedAt.textContent = INDEX_DATA.generatedAt;
+
+    const files = [];
+    let review;
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[char]));
+    }
+
+    function fileKey(file) {
+      return `${file.path} / ${file.name}`;
+    }
+
+    function cleanLines(text) {
+      return Array.from(new Set(String(text)
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter(Boolean)));
+    }
+
+    function resolveBackendEntry(text) {
+      const value = String(text || "").trim();
+      if (!value) return null;
+
+      const lowerValue = value.toLocaleLowerCase();
+      const exact = files.find((file) =>
+        file.name.toLocaleLowerCase() === lowerValue ||
+        fileKey(file).toLocaleLowerCase() === lowerValue
+      );
+      const partial = exact || files.find((file) =>
+        file.name.toLocaleLowerCase().includes(lowerValue) ||
+        fileKey(file).toLocaleLowerCase().includes(lowerValue)
+      );
+
+      if (partial) {
+        return {
+          name: partial.name,
+          path: partial.path,
+          key: fileKey(partial)
+        };
+      }
+
+      return {
+        name: value,
+        path: "后台清单中未匹配到文件树",
+        key: `backend:${value}`
+      };
+    }
+
+    function uniqueEntries(entries) {
+      const seen = new Set();
+      return entries.filter((entry) => {
+        if (!entry || seen.has(entry.key)) return false;
+        seen.add(entry.key);
+        return true;
+      });
+    }
+
+    function buildBackendReview() {
+      const wanted = uniqueEntries((BACKEND_REVIEW.wanted || []).map(resolveBackendEntry));
+      const unwantedKeys = new Set(wanted.map((entry) => entry.key));
+      const unwanted = uniqueEntries((BACKEND_REVIEW.unwanted || [])
+        .map(resolveBackendEntry)
+        .filter((entry) => entry && !unwantedKeys.has(entry.key)));
+
+      return {
+        wanted,
+        unwanted,
+        missing: cleanLines((BACKEND_REVIEW.missing || []).join("\n"))
+      };
+    }
+
+    function highlight(value, term) {
+      const text = String(value);
+      if (!term) return escapeHtml(text);
+      const lowerText = text.toLocaleLowerCase();
+      const lowerTerm = term.toLocaleLowerCase();
+      const index = lowerText.indexOf(lowerTerm);
+      if (index < 0) return escapeHtml(text);
+      return [
+        escapeHtml(text.slice(0, index)),
+        "<mark>",
+        escapeHtml(text.slice(index, index + term.length)),
+        "</mark>",
+        escapeHtml(text.slice(index + term.length))
+      ].join("");
+    }
+
+    function collectFiles(node, pathParts) {
+      const nextPath = node.type === "folder" ? [...pathParts, node.name] : pathParts;
+      if (node.type === "file") {
+        files.push({
+          name: node.name,
+          path: pathParts.join(" / ")
+        });
+        return;
+      }
+      node.children.forEach((child) => collectFiles(child, nextPath));
+    }
+
+    function renderTreeNode(node) {
+      if (node.type === "file") {
+        const item = document.createElement("li");
+        item.className = "file";
+        item.innerHTML = `<span class="icon">-</span><span>${escapeHtml(node.name)}</span>`;
+        return item;
+      }
+
+      const details = document.createElement("details");
+      details.open = true;
+      const summaryElement = document.createElement("summary");
+      summaryElement.innerHTML = `<span class="icon">+</span>${escapeHtml(node.name)}`;
+      details.appendChild(summaryElement);
+
+      const list = document.createElement("ul");
+      node.children.forEach((child) => list.appendChild(renderTreeNode(child)));
+      details.appendChild(list);
+      return details;
+    }
+
+    function renderSearch() {
+      const term = query.value.trim();
+      results.textContent = "";
+
+      if (!term) {
+        summary.textContent = "输入关键词后开始搜索。";
+        return;
+      }
+
+      const lowerTerm = term.toLocaleLowerCase();
+      const matches = files
+        .filter((file) => file.name.toLocaleLowerCase().includes(lowerTerm))
+        .sort((a, b) => a.name.localeCompare(b.name, "zh-CN", { sensitivity: "base" }));
+
+      const exact = matches.some((file) => file.name.toLocaleLowerCase() === lowerTerm);
+      summary.textContent = `找到 ${matches.length.toLocaleString("zh-CN")} 个匹配文件名。完整匹配：${exact ? "有" : "没有"}。`;
+
+      if (!matches.length) {
+        const empty = document.createElement("li");
+        empty.className = "empty";
+        empty.textContent = "没有找到匹配的文件名。";
+        results.appendChild(empty);
+        return;
+      }
+
+      matches.forEach((file) => {
+        const item = document.createElement("li");
+        item.className = "result";
+        item.innerHTML = `
+          <div>
+            <div class="name">${highlight(file.name, term)}</div>
+            <div class="path">${escapeHtml(file.path)}</div>
+          </div>
+        `;
+        results.appendChild(item);
+      });
+    }
+
+    function renderSavedList(type, element) {
+      element.textContent = "";
+      const items = review[type].slice().sort((a, b) => a.name.localeCompare(b.name, "zh-CN", { sensitivity: "base" }));
+      if (!items.length) {
+        const empty = document.createElement("li");
+        empty.className = "empty";
+        empty.textContent = "还没有内容。";
+        element.appendChild(empty);
+        return;
+      }
+
+      items.forEach((entry) => {
+        const item = document.createElement("li");
+        item.className = "saved-item";
+        item.innerHTML = `
+          <div class="name">${escapeHtml(entry.name)}</div>
+          <div class="path">${escapeHtml(entry.path)}</div>
+        `;
+        element.appendChild(item);
+      });
+    }
+
+    function renderMissingList() {
+      missingList.textContent = "";
+      if (!review.missing.length) {
+        const empty = document.createElement("li");
+        empty.className = "empty";
+        empty.textContent = "还没有内容。";
+        missingList.appendChild(empty);
+        return;
+      }
+
+      review.missing.forEach((name) => {
+        const item = document.createElement("li");
+        item.className = "saved-item";
+        item.innerHTML = `<div class="name">${escapeHtml(name)}</div>`;
+        missingList.appendChild(item);
+      });
+    }
+
+    function renderReview() {
+      wantedCount.textContent = `${review.wanted.length.toLocaleString("zh-CN")} 项`;
+      unwantedCount.textContent = `${review.unwanted.length.toLocaleString("zh-CN")} 项`;
+      missingCount.textContent = `${review.missing.length.toLocaleString("zh-CN")} 项`;
+      renderSavedList("wanted", wantedList);
+      renderSavedList("unwanted", unwantedList);
+      renderMissingList();
+    }
+
+    collectFiles(INDEX_DATA.tree, []);
+    treeRoot.appendChild(renderTreeNode(INDEX_DATA.tree));
+    review = buildBackendReview();
+    renderReview();
+
+    query.addEventListener("input", renderSearch);
+    clear.addEventListener("click", () => {
+      query.value = "";
+      query.focus();
+      renderSearch();
+    });
+  </script>
+</body>
+</html>
